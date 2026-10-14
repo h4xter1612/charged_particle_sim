@@ -48,17 +48,101 @@ void rk4_step(
     double dt
 )
 {
-    // TODO:
-    //
-    // Todavia NO lo hagas.
-    //
-    // Primero vamos a derivar juntos
-    // RK4 para el sistema:
-    //
-    // dr/dt = v
-    // dv/dt = a(r,v,t)
-}
+    const Vec3 r0 = particle.position;
+    const Vec3 v0 = particle.velocity;
 
+    // ----- k1 -----
+
+    const Vec3 k1_r = v0;
+
+    const Vec3 k1_v = acceleration(
+        particle,
+        r0,
+        v0,
+        time,
+        fields
+    );
+
+
+    // ----- k2 -----
+
+    const Vec3 r2 =
+        r0 + k1_r * (0.5 * dt);
+
+    const Vec3 v2 =
+        v0 + k1_v * (0.5 * dt);
+
+    const Vec3 k2_r = v2;
+
+    const Vec3 k2_v = acceleration(
+        particle,
+        r2,
+        v2,
+        time + 0.5 * dt,
+        fields
+    );
+
+
+    // ----- k3 -----
+
+    const Vec3 r3 =
+        r0 + k2_r * (0.5 * dt);
+
+    const Vec3 v3 =
+        v0 + k2_v * (0.5 * dt);
+
+    const Vec3 k3_r = v3;
+
+    const Vec3 k3_v = acceleration(
+        particle,
+        r3,
+        v3,
+        time + 0.5 * dt,
+        fields
+    );
+
+
+    // ----- k4 -----
+
+    const Vec3 r4 =
+        r0 + k3_r * dt;
+
+    const Vec3 v4 =
+        v0 + k3_v * dt;
+
+    const Vec3 k4_r = v4;
+
+    const Vec3 k4_v = acceleration(
+        particle,
+        r4,
+        v4,
+        time + dt,
+        fields
+    );
+
+
+    // ----- Final RK4 combination -----
+
+    particle.position =
+        r0
+        + (dt / 6.0)
+        * (
+            k1_r
+            + 2.0 * k2_r
+            + 2.0 * k3_r
+            + k4_r
+        );
+
+    particle.velocity =
+        v0
+        + (dt / 6.0)
+        * (
+            k1_v
+            + 2.0 * k2_v
+            + 2.0 * k3_v
+            + k4_v
+        );
+}
 
 void boris_step(
     Particle& particle,
