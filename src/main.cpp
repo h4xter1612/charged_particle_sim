@@ -28,11 +28,22 @@ int main()
     // m = 1, |q| = 1, B_0 = 1
     // --------------------------------------------------
 
+    // Particle particle{
+    //     {0.0, 0.0, 0.0},   // position
+    //     {1.0, 0.0, 0.2},   // velocity
+    //     1.0,                // normalized mass
+    //     1.0                 // normalized charge
+    // };
+
+    // Particle parameters for curvature drift
+    // - Close to a big radius circle compared to Larmor radius
+    // - Velocity with vy parallel and vx perp
+
     Particle particle{
-        {0.0, 0.0, 0.0},   // position
-        {1.0, 0.0, 0.2},   // velocity
-        1.0,                // normalized mass
-        1.0                 // normalized charge
+        {10.0, 0.0, 0.0},   // position
+        {0.2, 1.0, 0.0},    // velocity
+        1.0,                 // normalized mass
+        1.0                  // normalized charge
     };
 
     // --------------------------------------------------
@@ -48,19 +59,22 @@ int main()
     // fields.B0 = 1.0;
     // fields.E0 = 0.1;
 
-    fields.type = FieldCase::GradB;
+    // fields.type = FieldCase::GradB;
+    // fields.B0 = 1.0;
+    // fields.gradient = 0.05;
+
+    fields.type = FieldCase::Curvature;
     fields.B0 = 1.0;
-    fields.gradient = 0.05;
 
     // --------------------------------------------------
     // Simulation parameters
     // --------------------------------------------------
 
     const double dt = 0.01;
-    const double final_time = 100.0; // 20.0(UniformB,ExB)|100(GradB[slower])
+    const double final_time = 100.0; // 20.0(UniformB,ExB)|100(GradB[slower],Curvature)
 
     const std::string output_path =
-        "results/gradB.csv"; // uniform_B.csv|exb.csv|gradB.csv
+        "results/curvature.csv"; // uniform_B.csv|exb.csv|gradB.csv|curvature.csv
 
     // --------------------------------------------------
     // Basic input validation

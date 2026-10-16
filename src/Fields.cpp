@@ -1,5 +1,5 @@
 #include "Fields.hpp"
-
+#include <stdexcept>
 
 Vec3 electric_field(
     const Vec3& position,
@@ -30,7 +30,8 @@ Vec3 electric_field(
 
 
         case FieldCase::Curvature:
-            return {};
+            // No electric field for the curvature-drift benchmark.
+            return {0.0, 0.0, 0.0};
 
 
         case FieldCase::NonuniformE:
@@ -79,8 +80,35 @@ Vec3 magnetic_field(
         }
 
 
-        case FieldCase::Curvature:
-            return {};
+        case FieldCase::Curvature: {
+            // Constant-magnitude azimuthal magnetic field:
+            //
+            // B = B0 * e_phi
+            //
+            // In cartesian coordinates:
+            //
+            // e_phi = (-y/R, x/R, 0)
+            // where R = sqrt(x^2 + y^2)
+            //
+            // The field magnitude is constant, so there is no gradB drift
+            // The curved field lnes produce curvature drift
+            const Vec3 radial_position{
+                position.x,
+                position.y,
+                0.0
+            };
+            const double radius = radial_position.norm();
+
+            if (radius < 1.0e-12) {
+                throw std::runtime_error("Curvature field is singular at R = 0.");
+            };
+
+            return {
+                -config.B0 * position.y / radius,
+                config.B0 * position.x / radius,
+                0.0
+            };
+        }
 
 
         case FieldCase::NonuniformE:
