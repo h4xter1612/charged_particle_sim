@@ -36,15 +36,19 @@ Vec3 electric_field(
 
 
         case FieldCase::NonuniformE: {
-            // Slowly time-varying perpendicular electric field:
+            // Spatially nonuniform electric field:
             //
-            // E(t) = E0 * cos(omega * t) x-hat
+            // E(y) = E0 * cos(k x) x-hat
             //
-            // This produces both a time-dependent E x B curvature-drift and a polarization drift.
+            // For a finite Larmor radius, the particle samples different values of E during each gyro-orbit.
 
-            const double Ex = config.E0 * std::cos(config.omega * time);
+            const double Ex = config.E0 * std::cos(config.wavenumber * position.x);
 
-            return {Ex, 0.0, 0.0};
+            return {
+                Ex,
+                0.0,
+                0.0
+            };
         }
 
         case FieldCase::Polarization: {
