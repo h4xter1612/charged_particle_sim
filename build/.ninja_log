@@ -1,5 +1,0 @@
-# ninja log v7
-30	265	8138727031031693	CMakeFiles/charged_particle_sim.dir/src/Integrator.cpp.obj	23c0d7b8c611aaba
-20	436	8138727030933679	CMakeFiles/charged_particle_sim.dir/src/Fields.cpp.obj	c0cc1b81e241e488
-12	608	8138727030850535	CMakeFiles/charged_particle_sim.dir/src/main.cpp.obj	c02c123de9423abe
-609	1958	8138727036821130	charged_particle_sim.exe	a7908cd415da2363

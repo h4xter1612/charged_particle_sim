@@ -1,3 +1,0 @@
-C:/Users/conej/Documents/Fusion/Master/USTC/First_Semester/Fundamentals_PlasmaPhysics/drift_codes/charged_particle_sim/build/CMakeFiles/charged_particle_sim.dir
-C:/Users/conej/Documents/Fusion/Master/USTC/First_Semester/Fundamentals_PlasmaPhysics/drift_codes/charged_particle_sim/build/CMakeFiles/edit_cache.dir
-C:/Users/conej/Documents/Fusion/Master/USTC/First_Semester/Fundamentals_PlasmaPhysics/drift_codes/charged_particle_sim/build/CMakeFiles/rebuild_cache.dir
