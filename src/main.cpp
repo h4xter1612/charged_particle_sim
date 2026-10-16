@@ -1,7 +1,7 @@
-#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <string>
 
 #include "Vec3.hpp"
 #include "Particle.hpp"
@@ -11,6 +11,10 @@
 int main()
 {
     std::cout << "Charged Particle Simulator\n";
+
+    // --------------------------------------------------
+    // Particle initial conditions
+    // --------------------------------------------------
 
     // --------------------------------------------------
     // Normalized simulation parameters
@@ -31,37 +35,57 @@ int main()
         1.0                 // normalized charge
     };
 
+    // --------------------------------------------------
+    // Field configuration
+    // --------------------------------------------------
+
     FieldConfig fields;
-    fields.type = FieldCase::UniformB;
+
+    fields.type = FieldCase::ExB;
     fields.B0 = 1.0;
+    fields.E0 = 0.1;
+
+    // --------------------------------------------------
+    // Simulation parameters
+    // --------------------------------------------------
 
     const double dt = 0.01;
     const double final_time = 20.0;
 
+    const std::string output_path =
+        "results/exb.csv";
+
+    // --------------------------------------------------
+    // Basic input validation
+    // --------------------------------------------------
+
     if (particle.mass <= 0.0) {
-        std::cerr << "Error: particle mass must be positive.\n";
-        return 1;
-    }
-
-    if (dt <= 0.0) {
-        std::cerr << "Error: time step must be positive.\n";
-        return 1;
-    }
-
-    if (fields.B0 == 0.0) {
-        std::cerr << "Error: uniform-B benchmark requires B0 != 0.\n";
-        return 1;
-    }
-
-    std::ofstream output("results/uniform_B.csv");
-
-    if (!output) {
-        std::cerr << "Error: could not open output file.\n";
+        std::cerr
+            << "Error: particle mass must be positive.\n";
         return 1;
     }
 
     if (particle.charge == 0.0) {
-        std::cerr << "Error: uniform-B benchmark requires nonzero charge.\n";
+        std::cerr
+            << "Error: particle charge must be nonzero.\n";
+        return 1;
+    }
+
+    if (dt <= 0.0) {
+        std::cerr
+            << "Error: time step must be positive.\n";
+        return 1;
+    }
+
+    // --------------------------------------------------
+    // Output file
+    // --------------------------------------------------
+
+    std::ofstream output(output_path);
+
+    if (!output) {
+        std::cerr
+            << "Error: could not open output file.\n";
         return 1;
     }
 
@@ -73,44 +97,13 @@ int main()
         << "vx,vy,vz,"
         << "kinetic_energy\n";
 
+    // --------------------------------------------------
+    // Time integration
+    // --------------------------------------------------
+
     double time = 0.0;
 
-    const double pi = std::acos(-1.0);
-
-    const double initial_energy =
-        particle.kinetic_energy();
-
-    const double gyrofrequency =
-        std::abs(particle.charge)
-        * std::abs(fields.B0)
-        / particle.mass;
-
-    const double gyroperiod =
-        2.0 * pi / gyrofrequency;
-
-    const double perpendicular_speed =
-        std::sqrt(
-            particle.velocity.x * particle.velocity.x
-            + particle.velocity.y * particle.velocity.y
-        );
-
-    const double larmor_radius =
-        perpendicular_speed / gyrofrequency;
-
-    double max_relative_energy_error = 0.0;
-
     while (time <= final_time) {
-
-        const double current_energy =
-            particle.kinetic_energy();
-
-        const double relative_energy_error =
-            std::abs(current_energy - initial_energy)
-            / initial_energy;
-
-        if (relative_energy_error > max_relative_energy_error) {
-            max_relative_energy_error = relative_energy_error;
-        }
 
         output
             << time << ","
@@ -132,30 +125,12 @@ int main()
 
         time += dt;
     }
-    
+
     output.close();
-
-    const double final_energy =
-    particle.kinetic_energy();
-
-    std::cout
-        << "\n--- Uniform-B benchmark ---\n"
-        << "Gyrofrequency:             "
-        << gyrofrequency << '\n'
-        << "Gyroperiod:                "
-        << gyroperiod << '\n'
-        << "Larmor radius:             "
-        << larmor_radius << '\n'
-        << "Initial kinetic energy:    "
-        << initial_energy << '\n'
-        << "Final kinetic energy:      "
-        << final_energy << '\n'
-        << "Maximum relative E error:  "
-        << max_relative_energy_error << '\n';
 
     std::cout
         << "Simulation finished.\n"
-        << "Output: results/uniform_B.csv\n";
+        << "Output: " << output_path << '\n';
 
     return 0;
 }

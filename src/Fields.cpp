@@ -19,9 +19,13 @@ Vec3 electric_field(
 
 
         case FieldCase::ExB:
-            // TODO despues:
+            // Uniform electric field:
             // E = E0 x-hat
-            return {};
+            return {
+                config.E0,
+                0.0,
+                0.0
+            };
 
 
         case FieldCase::GradB:
@@ -62,9 +66,13 @@ Vec3 magnetic_field(
 
 
         case FieldCase::ExB:
-            // TODO:
-            // tambien queremos B = B0 z-hat
-            return {};
+            // Uniform magnetic field:
+            // B = B0 z-hat
+            return {
+                0.0,
+                0.0,
+                config.B0
+            };
 
 
         case FieldCase::GradB:

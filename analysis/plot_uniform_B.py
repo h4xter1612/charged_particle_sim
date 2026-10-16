@@ -105,8 +105,8 @@ def main():
     # Figure 1: xy orbit
     # -----------------------------------------
     plt.figure(figsize=(6, 6))
-    plt.plot(x, y, label="Numerical orbit")
-    plt.plot(x_exact, y_exact, "--", label="Analytical orbit")
+    plt.plot(x, y, linewidth=4.5, label="Numerical orbit")
+    plt.plot(x_exact, y_exact, linewidth=1.0, label="Analytical orbit")
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Uniform-B benchmark: xy orbit")
