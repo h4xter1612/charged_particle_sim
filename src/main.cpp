@@ -39,11 +39,21 @@ int main()
     // - Close to a big radius circle compared to Larmor radius
     // - Velocity with vy parallel and vx perp
 
+    // Particle particle{
+    //     {10.0, 0.0, 0.0},   // position
+    //     {0.2, 1.0, 0.0},    // velocity
+    //     1.0,                 // normalized mass
+    //     1.0                  // normalized charge
+    // };
+
+    // Particle parameters for polarization drift
+    // Particle initialization for guiding center movement avoiding unnecessary big gyro-orbit
+
     Particle particle{
-        {10.0, 0.0, 0.0},   // position
-        {0.2, 1.0, 0.0},    // velocity
-        1.0,                 // normalized mass
-        1.0                  // normalized charge
+        {0.0, 0.0, 0.0},
+        {0.0, -0.2, 0.2},
+        1.0,
+        1.0
     };
 
     // --------------------------------------------------
@@ -63,18 +73,23 @@ int main()
     // fields.B0 = 1.0;
     // fields.gradient = 0.05;
 
-    fields.type = FieldCase::Curvature;
+    // fields.type = FieldCase::Curvature;
+    // fields.B0 = 1.0;
+
+    fields.type = FieldCase::Polarization;
     fields.B0 = 1.0;
+    fields.E0 = 0.2;
+    fields.omega = 0.05;
 
     // --------------------------------------------------
     // Simulation parameters
     // --------------------------------------------------
 
     const double dt = 0.01;
-    const double final_time = 100.0; // 20.0(UniformB,ExB)|100(GradB[slower],Curvature)
+    const double final_time = 250.0; // 20.0(UniformB,ExB)|100(GradB[slower],Curvature)|250(Polarization)
 
     const std::string output_path =
-        "results/curvature.csv"; // uniform_B.csv|exb.csv|gradB.csv|curvature.csv
+        "results/polarization.csv"; // uniform_B.csv|exb.csv|gradB.csv|curvature.csv|polarization.csv
 
     // --------------------------------------------------
     // Basic input validation

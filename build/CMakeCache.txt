@@ -24,8 +24,8 @@ CMAKE_AR:FILEPATH=C:/Users/conej/scoop/apps/gcc/current/bin/ar.exe
 // MinSizeRel ...
 CMAKE_BUILD_TYPE:STRING=
 
-//No help, variable specified on the command line.
-CMAKE_CXX_COMPILER:UNINITIALIZED=g++
+//CXX compiler
+CMAKE_CXX_COMPILER:STRING=C:/Users/conej/scoop/apps/gcc/current/bin/g++.exe
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler

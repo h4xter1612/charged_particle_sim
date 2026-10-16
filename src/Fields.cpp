@@ -1,5 +1,6 @@
 #include "Fields.hpp"
 #include <stdexcept>
+#include <cmath>
 
 Vec3 electric_field(
     const Vec3& position,
@@ -34,14 +35,30 @@ Vec3 electric_field(
             return {0.0, 0.0, 0.0};
 
 
-        case FieldCase::NonuniformE:
-            return {};
+        case FieldCase::NonuniformE: {
+            // Slowly time-varying perpendicular electric field:
+            //
+            // E(t) = E0 * cos(omega * t) x-hat
+            //
+            // This produces both a time-dependent E x B curvature-drift and a polarization drift.
 
+            const double Ex = config.E0 * std::cos(config.omega * time);
 
-        case FieldCase::Polarization:
-            return {};
+            return {Ex, 0.0, 0.0};
+        }
+
+        case FieldCase::Polarization: {
+            // Slowly time-varying perpendicular electric field:
+            //
+            // E(t) = E0 * cos(omega * t) x-hat
+            //
+            // This produces both a time-dependent E x B curvature-drift and a polarization drift.
+
+            const double Ex = config.E0 * std::cos(config.omega * time);
+
+            return {Ex, 0.0, 0.0};
+        }
     }
-
     return {};
 }
 
@@ -112,11 +129,19 @@ Vec3 magnetic_field(
 
 
         case FieldCase::NonuniformE:
-            return {};
+            // Uniform magnetic field:
+            //
+            // B = B0 z-hat
+
+            return {0.0, 0.0, config.B0};
 
 
         case FieldCase::Polarization:
-            return {};
+            // Uniform magnetic field:
+            //
+            // B = B0 z-hat
+
+            return {0.0, 0.0, config.B0};
     }
 
     return {};
