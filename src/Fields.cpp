@@ -21,16 +21,12 @@ Vec3 electric_field(
         case FieldCase::ExB:
             // Uniform electric field:
             // E = E0 x-hat
-            return {
-                config.E0,
-                0.0,
-                0.0
-            };
+            return {config.E0, 0.0, 0.0};
 
 
         case FieldCase::GradB:
-            // Para este caso probablemente E = 0
-            return {};
+            // No electric field for the grad-B benchmark.
+            return {0.0, 0.0, 0.0};
 
 
         case FieldCase::Curvature:
@@ -68,21 +64,19 @@ Vec3 magnetic_field(
         case FieldCase::ExB:
             // Uniform magnetic field:
             // B = B0 z-hat
-            return {
-                0.0,
-                0.0,
-                config.B0
-            };
+            return {0.0, 0.0, config.B0};
 
 
-        case FieldCase::GradB:
-            // TODO mas adelante.
+        case FieldCase::GradB: {
+            // Weakly nonuniform magnetic field:
             //
-            // Aqui tendremos MUCHO cuidado con:
+            // B(x) = B0 * (1 + gradient * x) z-hat
             //
-            // div B = 0
-            //
-            return {};
+            // This field satisfies div(B) = 0 because
+            // Bx = By = 0 and Bz has no z dependence.
+            const double Bz = config.B0 * (1.0 + config.gradient * position.x);
+            return {0.0, 0.0, Bz};
+        }
 
 
         case FieldCase::Curvature:

@@ -41,19 +41,26 @@ int main()
 
     FieldConfig fields;
 
-    fields.type = FieldCase::ExB;
+    // fields.type = FieldCase::UniformB;
+    // fields.B0 = 1.0;
+
+    // fields.type = FieldCase::ExB;
+    // fields.B0 = 1.0;
+    // fields.E0 = 0.1;
+
+    fields.type = FieldCase::GradB;
     fields.B0 = 1.0;
-    fields.E0 = 0.1;
+    fields.gradient = 0.05;
 
     // --------------------------------------------------
     // Simulation parameters
     // --------------------------------------------------
 
     const double dt = 0.01;
-    const double final_time = 20.0;
+    const double final_time = 100.0; // 20.0(UniformB,ExB)|100(GradB[slower])
 
     const std::string output_path =
-        "results/exb.csv";
+        "results/gradB.csv"; // uniform_B.csv|exb.csv|gradB.csv
 
     // --------------------------------------------------
     // Basic input validation
