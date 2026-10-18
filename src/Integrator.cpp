@@ -1,6 +1,5 @@
 #include "Integrator.hpp"
 
-
 Vec3 acceleration(
     const Particle& particle,
     const Vec3& position,
@@ -21,25 +20,14 @@ Vec3 acceleration(
         fields
     );
 
-    // TODO:
-    //
-    // Implementa:
-    //
-    // a = (q/m) * (E + v x B)
-    //
-    // Ya tendras disponibles:
-    //
-    // cross(...)
-    // operator+
-    // operator*
-    //
-    Vec3 a;
-    const double q_over_m = particle.charge / particle.mass;
-    const Vec3 lorentz_term = E + cross(velocity, B);
+    const double q_over_m =
+        particle.charge / particle.mass;
+
+    const Vec3 lorentz_term =
+        E + cross(velocity, B);
 
     return q_over_m * lorentz_term;
 }
-
 
 void rk4_step(
     Particle& particle,
@@ -51,10 +39,8 @@ void rk4_step(
     const Vec3 r0 = particle.position;
     const Vec3 v0 = particle.velocity;
 
-    // ----- k1 -----
-
+    // k1: derivatives at the beginning of the time step.
     const Vec3 k1_r = v0;
-
     const Vec3 k1_v = acceleration(
         particle,
         r0,
@@ -63,17 +49,13 @@ void rk4_step(
         fields
     );
 
-
-    // ----- k2 -----
-
+    // k2: derivatives at the midpoint estimated from k1.
     const Vec3 r2 =
         r0 + k1_r * (0.5 * dt);
-
     const Vec3 v2 =
         v0 + k1_v * (0.5 * dt);
 
     const Vec3 k2_r = v2;
-
     const Vec3 k2_v = acceleration(
         particle,
         r2,
@@ -82,17 +64,13 @@ void rk4_step(
         fields
     );
 
-
-    // ----- k3 -----
-
+    // k3: derivatives at the midpoint estimated from k2.
     const Vec3 r3 =
         r0 + k2_r * (0.5 * dt);
-
     const Vec3 v3 =
         v0 + k2_v * (0.5 * dt);
 
     const Vec3 k3_r = v3;
-
     const Vec3 k3_v = acceleration(
         particle,
         r3,
@@ -101,17 +79,13 @@ void rk4_step(
         fields
     );
 
-
-    // ----- k4 -----
-
+    // k4: derivatives at the end of the time step estimated from k3.
     const Vec3 r4 =
         r0 + k3_r * dt;
-
     const Vec3 v4 =
         v0 + k3_v * dt;
 
     const Vec3 k4_r = v4;
-
     const Vec3 k4_v = acceleration(
         particle,
         r4,
@@ -120,9 +94,7 @@ void rk4_step(
         fields
     );
 
-
-    // ----- Final RK4 combination -----
-
+    // Fourth-order weighted combination.
     particle.position =
         r0
         + (dt / 6.0)
@@ -142,19 +114,4 @@ void rk4_step(
             + 2.0 * k3_v
             + k4_v
         );
-}
-
-void boris_step(
-    Particle& particle,
-    const FieldConfig& fields,
-    double time,
-    double dt
-)
-{
-    // TODO futuro
-
-    (void)particle;
-    (void)fields;
-    (void)time;
-    (void)dt;
 }

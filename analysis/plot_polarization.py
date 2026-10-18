@@ -14,7 +14,6 @@ def main():
 
     csv_path = project_dir / "results" / "polarization.csv"
     figures_dir = project_dir / "results" / "figures"
-
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     # --------------------------------------------------
@@ -24,45 +23,27 @@ def main():
     data = np.genfromtxt(
         csv_path,
         delimiter=",",
-        names=True
+        names=True,
     )
 
     t = data["t"]
-
     x = data["x"]
     y = data["y"]
     z = data["z"]
-
     vx = data["vx"]
     vy = data["vy"]
     vz = data["vz"]
-
     kinetic_energy = data["kinetic_energy"]
 
     # --------------------------------------------------
     # Benchmark parameters
     #
-    # Electric field:
-    #
     # E(t) = E0 cos(omega_E t) x-hat
+    # B    = B0 z-hat
     #
-    # Magnetic field:
-    #
-    # B = B0 z-hat
-    #
-    # Particle:
-    #
-    # q = 1
-    # m = 1
-    #
-    # Initial velocity:
-    #
+    # Initial conditions:
+    # r(0) = (0, 0, 0)
     # v(0) = (0, -0.2, 0.2)
-    #
-    # At t = 0, the perpendicular velocity is chosen
-    # to match the initial E x B drift:
-    #
-    # v_E(0) = -0.2 y-hat
     # --------------------------------------------------
 
     q = 1.0
@@ -72,268 +53,201 @@ def main():
     B0 = 1.0
     omega_E = 0.05
 
-    # Signed cyclotron frequency:
+    x0 = 0.0
+    y0 = 0.0
+    z0 = 0.0
+
+    vx0 = 0.0
+    vy0 = -0.2
+    vz0 = 0.2
+
+    q_over_m = q / mass
+    omega_c = q_over_m * B0
+
+    if np.isclose(abs(omega_c), omega_E):
+        raise ValueError(
+            "The analytical solution used here assumes omega_E != |Omega_c|."
+        )
+
+    # --------------------------------------------------
+    # Exact full-orbit solution
     #
-    # Omega_c = q B / m
-
-    omega_c = q * B0 / mass
-
+    # The perpendicular equations are:
+    #
+    # dvx/dt = (q/m) E0 cos(omega_E t) + Omega_c vy
+    # dvy/dt = -Omega_c vx
+    #
+    # Eliminating vx gives a forced harmonic oscillator:
+    #
+    # d2(vy)/dt2 + Omega_c^2 vy
+    #     = -Omega_c (q/m) E0 cos(omega_E t)
+    #
+    # The exact solution contains:
+    #   1. a small cyclotron-frequency homogeneous term, and
+    #   2. the slow response at omega_E.
     # --------------------------------------------------
-    # Time-dependent electric field
-    # --------------------------------------------------
 
-    Ex = (
-        E0
-        * np.cos(omega_E * t)
+    slow_vy_amplitude = (
+        -omega_c
+        * q_over_m
+        * E0
+        / (omega_c**2 - omega_E**2)
     )
 
-    dEx_dt = (
-        -E0
-        * omega_E
-        * np.sin(omega_E * t)
+    gyro_vy_amplitude = vy0 - slow_vy_amplitude
+
+    cos_c = np.cos(omega_c * t)
+    sin_c = np.sin(omega_c * t)
+    cos_e = np.cos(omega_E * t)
+    sin_e = np.sin(omega_E * t)
+
+    vy_exact = (
+        gyro_vy_amplitude * cos_c
+        - vx0 * sin_c
+        + slow_vy_amplitude * cos_e
+    )
+
+    vx_exact = (
+        gyro_vy_amplitude * sin_c
+        + vx0 * cos_c
+        + slow_vy_amplitude
+        * (omega_E / omega_c)
+        * sin_e
+    )
+
+    x_exact = (
+        x0
+        + gyro_vy_amplitude
+        * (1.0 - cos_c)
+        / omega_c
+        + vx0 * sin_c / omega_c
+        + slow_vy_amplitude
+        * (1.0 - cos_e)
+        / omega_c
+    )
+
+    y_exact = (
+        y0
+        + gyro_vy_amplitude
+        * sin_c
+        / omega_c
+        + vx0
+        * (cos_c - 1.0)
+        / omega_c
+        + slow_vy_amplitude
+        * sin_e
+        / omega_E
+    )
+
+    z_exact = z0 + vz0 * t
+    vz_exact = np.full_like(t, vz0)
+
+    kinetic_energy_exact = 0.5 * mass * (
+        vx_exact**2
+        + vy_exact**2
+        + vz_exact**2
     )
 
     # --------------------------------------------------
-    # Theoretical E x B drift
+    # First-order drift theory
+    #
+    # For omega_E / Omega_c << 1:
     #
     # v_E = E x B / B^2
     #
-    # For:
+    # v_E,y = -(E0/B0) cos(omega_E t)
     #
-    # E = Ex x-hat
-    # B = B0 z-hat
+    # and the polarization drift is:
     #
-    # x-hat x z-hat = -y-hat
+    # v_p = (m / q B^2) dE_perp/dt
     #
-    # therefore:
-    #
-    # v_E,y = -Ex / B0
+    # v_p,x = -(m E0 omega_E / q B0^2)
+    #         sin(omega_E t)
     # --------------------------------------------------
 
     v_exb_y_theory = (
-        -Ex / B0
+        -E0 / B0
+        * cos_e
     )
-
-    # --------------------------------------------------
-    # Theoretical polarization drift
-    #
-    # For a uniform magnetic field and a slowly
-    # time-varying perpendicular electric field:
-    #
-    # v_p =
-    #     m / (q B^2) * dE_perp/dt
-    #
-    # Here dE/dt points entirely along x:
-    #
-    # v_p,x =
-    #     m / (q B0^2) * dEx/dt
-    # --------------------------------------------------
 
     v_pol_x_theory = (
-        mass
+        -mass
+        * E0
+        * omega_E
         / (q * B0**2)
-        * dEx_dt
+        * sin_e
     )
-
-    # --------------------------------------------------
-    # Adiabatic ordering
-    #
-    # Polarization drift is naturally small compared
-    # with E x B drift when:
-    #
-    # omega_E / Omega_c << 1
-    # --------------------------------------------------
 
     temporal_ordering = (
         omega_E / abs(omega_c)
     )
 
-    exb_velocity_amplitude = (
-        E0 / B0
-    )
-
-    polarization_velocity_amplitude = (
+    exb_amplitude_first_order = E0 / B0
+    polarization_amplitude_first_order = (
         mass
         * E0
         * omega_E
         / (abs(q) * B0**2)
     )
 
-    # --------------------------------------------------
-    # Numerical guiding center
-    #
-    # First remove the instantaneous E x B motion from
-    # the particle velocity:
-    #
-    # w = v - v_E
-    #
-    # For B = B0 z-hat:
-    #
-    # R = r + (w x b) / Omega_c
-    #
-    # Since v_E only has a y component:
-    #
-    # w_x = vx
-    # w_y = vy - v_E,y
-    #
-    # and therefore:
-    #
-    # R_x = x + w_y / Omega_c
-    # R_y = y - w_x / Omega_c
-    #
-    # For this spatially uniform E(t), this transformed
-    # center cleanly separates the gyromotion from the
-    # slow E x B and polarization motions.
-    # --------------------------------------------------
+    # The exact slow response differs from first-order
+    # drift theory by the factor 1 / [1 - (omega_E/Omega_c)^2].
 
-    wx = vx
-    wy = vy - v_exb_y_theory
-
-    gc_x = (
-        x + wy / omega_c
+    slow_response_factor = (
+        1.0
+        / (1.0 - temporal_ordering**2)
     )
 
-    gc_y = (
-        y - wx / omega_c
+    exb_amplitude_exact_slow = abs(
+        slow_vy_amplitude
     )
 
-    gc_z = z
-
-    # --------------------------------------------------
-    # Theoretical guiding-center trajectory
-    #
-    # From:
-    #
-    # dR_x/dt = v_p,x
-    #
-    # integrating gives:
-    #
-    # R_x(t) =
-    # R_x(0)
-    # + m/(q B^2) [E(t) - E(0)]
-    #
-    # Also:
-    #
-    # dR_y/dt = v_E,y
-    #
-    # which gives:
-    #
-    # R_y(t) =
-    # R_y(0)
-    # - E0/(B0 omega_E) sin(omega_E t)
-    # --------------------------------------------------
-
-    gc_x_theory = (
-        gc_x[0]
-        + mass
-        / (q * B0**2)
-        * (Ex - Ex[0])
-    )
-
-    gc_y_theory = (
-        gc_y[0]
-        - E0
-        / (B0 * omega_E)
-        * np.sin(omega_E * t)
-    )
-
-    # Parallel motion is unaffected by the perpendicular
-    # electric and magnetic fields.
-
-    gc_z_theory = (
-        gc_z[0]
-        + vz[0] * t
+    polarization_amplitude_exact_slow = abs(
+        slow_vy_amplitude
+        * omega_E
+        / omega_c
     )
 
     # --------------------------------------------------
-    # Numerical guiding-center velocities
-    #
-    # Differentiate the reconstructed guiding-center
-    # trajectory using second-order finite differences.
+    # Numerical error against the exact full orbit
     # --------------------------------------------------
 
-    gc_vx_numerical = np.gradient(
-        gc_x,
-        t,
-        edge_order=2
-    )
+    max_x_error = np.max(np.abs(x - x_exact))
+    max_y_error = np.max(np.abs(y - y_exact))
+    max_z_error = np.max(np.abs(z - z_exact))
 
-    gc_vy_numerical = np.gradient(
-        gc_y,
-        t,
-        edge_order=2
-    )
+    max_vx_error = np.max(np.abs(vx - vx_exact))
+    max_vy_error = np.max(np.abs(vy - vy_exact))
+    max_vz_error = np.max(np.abs(vz - vz_exact))
 
-    # --------------------------------------------------
-    # Guiding-center position errors
-    # --------------------------------------------------
-
-    max_gc_x_error = np.max(
+    max_energy_error = np.max(
         np.abs(
-            gc_x - gc_x_theory
-        )
-    )
-
-    max_gc_y_error = np.max(
-        np.abs(
-            gc_y - gc_y_theory
+            kinetic_energy
+            - kinetic_energy_exact
         )
     )
 
     # --------------------------------------------------
-    # Drift-velocity errors
+    # Work-energy consistency
+    #
+    # The magnetic field performs no work. Therefore:
+    #
+    # dK/dt = q E dot v = q Ex vx
     # --------------------------------------------------
 
-    max_pol_velocity_error = np.max(
-        np.abs(
-            gc_vx_numerical
-            - v_pol_x_theory
-        )
-    )
-
-    max_exb_velocity_error = np.max(
-        np.abs(
-            gc_vy_numerical
-            - v_exb_y_theory
-        )
-    )
-
-    # --------------------------------------------------
-    # Energy / work consistency
-    #
-    # Because E != 0, kinetic energy is not expected
-    # to remain constant.
-    #
-    # The work-energy equation is:
-    #
-    # dK/dt = q E dot v
-    #
-    # Here:
-    #
-    # dK/dt = q Ex vx
-    #
-    # Numerically integrate the electric power and
-    # compare it with the simulated kinetic energy.
-    # --------------------------------------------------
-
-    electric_power = (
-        q * Ex * vx
-    )
+    Ex = E0 * cos_e
+    electric_power = q * Ex * vx
 
     dt_values = np.diff(t)
-
     work_increments = (
         0.5
-        * (
-            electric_power[:-1]
-            + electric_power[1:]
-        )
+        * (electric_power[:-1] + electric_power[1:])
         * dt_values
     )
 
     cumulative_work = np.concatenate((
         [0.0],
-        np.cumsum(work_increments)
+        np.cumsum(work_increments),
     ))
 
     energy_from_work = (
@@ -370,34 +284,58 @@ def main():
         f"{temporal_ordering:.6e}"
     )
 
-    print("\nTheoretical drift amplitudes:")
+    print("\nFirst-order drift amplitudes:")
     print(
         f"  max |v_E| = "
-        f"{exb_velocity_amplitude:.8f}"
+        f"{exb_amplitude_first_order:.8f}"
     )
     print(
         f"  max |v_p| = "
-        f"{polarization_velocity_amplitude:.8f}"
+        f"{polarization_amplitude_first_order:.8f}"
     )
 
-    print("\nGuiding-center position comparison:")
+    print("\nExact slow-response amplitudes:")
     print(
-        f"  max |R_x,num - R_x,theory| = "
-        f"{max_gc_x_error:.6e}"
+        f"  max |v_y,slow| = "
+        f"{exb_amplitude_exact_slow:.8f}"
     )
     print(
-        f"  max |R_y,num - R_y,theory| = "
-        f"{max_gc_y_error:.6e}"
+        f"  max |v_x,slow| = "
+        f"{polarization_amplitude_exact_slow:.8f}"
+    )
+    print(
+        f"  finite-frequency correction factor = "
+        f"{slow_response_factor:.8f}"
     )
 
-    print("\nGuiding-center velocity comparison:")
+    print("\nExact full-orbit comparison:")
     print(
-        f"  max |v_p,x,num - v_p,x,theory| = "
-        f"{max_pol_velocity_error:.6e}"
+        f"  max |x_num - x_exact| = "
+        f"{max_x_error:.6e}"
     )
     print(
-        f"  max |v_E,y,num - v_E,y,theory| = "
-        f"{max_exb_velocity_error:.6e}"
+        f"  max |y_num - y_exact| = "
+        f"{max_y_error:.6e}"
+    )
+    print(
+        f"  max |z_num - z_exact| = "
+        f"{max_z_error:.6e}"
+    )
+    print(
+        f"  max |vx_num - vx_exact| = "
+        f"{max_vx_error:.6e}"
+    )
+    print(
+        f"  max |vy_num - vy_exact| = "
+        f"{max_vy_error:.6e}"
+    )
+    print(
+        f"  max |vz_num - vz_exact| = "
+        f"{max_vz_error:.6e}"
+    )
+    print(
+        f"  max |K_num - K_exact| = "
+        f"{max_energy_error:.6e}"
     )
 
     print("\nWork-energy consistency:")
@@ -407,259 +345,201 @@ def main():
     )
 
     # --------------------------------------------------
-    # Figure 1:
-    # Particle trajectory and guiding center in xy
-    #
-    # The fast particle gyromotion is superimposed on
-    # the much slower motion of the guiding center.
+    # Figure 1: numerical vs exact perpendicular orbit
     # --------------------------------------------------
 
     plt.figure(figsize=(8, 7))
-
+    plt.plot(x, y, label="Numerical orbit")
     plt.plot(
-        x,
-        y,
-        label="Particle orbit"
-    )
-
-    plt.plot(
-        gc_x,
-        gc_y,
+        x_exact,
+        y_exact,
         "--",
-        label="Numerical guiding center"
-    )
-
-    plt.plot(
-        gc_x_theory,
-        gc_y_theory,
-        ":",
-        label="Drift theory"
+        label="Exact full-orbit solution",
     )
 
     plt.xlabel("x")
     plt.ylabel("y")
-
-    plt.title(
-        "Polarization drift: particle and guiding-center motion"
-    )
-
+    plt.title("Polarization benchmark: perpendicular motion")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
     plt.savefig(
         figures_dir / "polarization_xy_motion.png",
-        dpi=200
+        dpi=200,
     )
 
     # --------------------------------------------------
-    # Figure 2:
-    # Polarization motion in x
+    # Figure 2: polarization velocity
     #
-    # The x component of the guiding-center velocity
-    # is the polarization drift.
+    # The numerical full orbit contains a small residual
+    # cyclotron oscillation because the initial velocity
+    # matches first-order drift theory rather than the
+    # exact finite-frequency slow solution.
     # --------------------------------------------------
+
+    slow_vx_exact = (
+        slow_vy_amplitude
+        * (omega_E / omega_c)
+        * sin_e
+    )
 
     plt.figure(figsize=(8, 5))
-
     plt.plot(
         t,
-        gc_vx_numerical,
-        label="Numerical guiding-center velocity"
+        vx,
+        label="Numerical full-orbit vx",
     )
-
+    plt.plot(
+        t,
+        slow_vx_exact,
+        "--",
+        label="Exact slow response",
+    )
     plt.plot(
         t,
         v_pol_x_theory,
-        "--",
-        label="Polarization-drift theory"
+        ":",
+        label="First-order polarization drift",
     )
 
     plt.xlabel("t")
     plt.ylabel("Velocity in x")
-
-    plt.title(
-        "Polarization drift velocity"
-    )
-
+    plt.title("Polarization drift: x velocity")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
     plt.savefig(
         figures_dir / "polarization_velocity_x.png",
-        dpi=200
+        dpi=200,
     )
 
     # --------------------------------------------------
-    # Figure 3:
-    # Time-dependent E x B drift in y
+    # Figure 3: time-dependent E x B response
     # --------------------------------------------------
+
+    slow_vy_exact = slow_vy_amplitude * cos_e
 
     plt.figure(figsize=(8, 5))
-
     plt.plot(
         t,
-        gc_vy_numerical,
-        label="Numerical guiding-center velocity"
+        vy,
+        label="Numerical full-orbit vy",
     )
-
+    plt.plot(
+        t,
+        slow_vy_exact,
+        "--",
+        label="Exact slow response",
+    )
     plt.plot(
         t,
         v_exb_y_theory,
-        "--",
-        label="E x B theory"
+        ":",
+        label="First-order E x B drift",
     )
 
     plt.xlabel("t")
     plt.ylabel("Velocity in y")
-
-    plt.title(
-        "Time-dependent E x B drift"
-    )
-
+    plt.title("Time-dependent E x B response")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
     plt.savefig(
         figures_dir / "polarization_exb_velocity_y.png",
-        dpi=200
+        dpi=200,
     )
 
     # --------------------------------------------------
-    # Figure 4:
-    # Guiding-center coordinates
-    #
-    # R_y has the much larger E x B motion.
-    # R_x contains the smaller polarization response.
+    # Figure 4: position components
     # --------------------------------------------------
 
     plt.figure(figsize=(8, 6))
-
-    plt.plot(
-        t,
-        gc_x,
-        label="R_x numerical"
-    )
-
-    plt.plot(
-        t,
-        gc_x_theory,
-        "--",
-        label="R_x theory"
-    )
-
-    plt.plot(
-        t,
-        gc_y,
-        label="R_y numerical"
-    )
-
-    plt.plot(
-        t,
-        gc_y_theory,
-        "--",
-        label="R_y theory"
-    )
+    plt.plot(t, x, label="x numerical")
+    plt.plot(t, x_exact, "--", label="x exact")
+    plt.plot(t, y, label="y numerical")
+    plt.plot(t, y_exact, "--", label="y exact")
 
     plt.xlabel("t")
-    plt.ylabel("Guiding-center position")
-
-    plt.title(
-        "Polarization drift: guiding-center coordinates"
-    )
-
+    plt.ylabel("Position")
+    plt.title("Polarization benchmark: position components")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
     plt.savefig(
-        figures_dir / "polarization_guiding_center.png",
-        dpi=200
+        figures_dir / "polarization_position.png",
+        dpi=200,
     )
 
     # --------------------------------------------------
-    # Figure 5:
-    # Work-energy theorem
-    #
-    # Magnetic fields perform no work, but the
-    # time-dependent electric field exchanges energy
-    # with the particle.
+    # Figure 5: work-energy theorem
     # --------------------------------------------------
 
     plt.figure(figsize=(8, 5))
-
     plt.plot(
         t,
         kinetic_energy,
-        label="Numerical kinetic energy"
+        label="Numerical kinetic energy",
     )
-
+    plt.plot(
+        t,
+        kinetic_energy_exact,
+        "--",
+        label="Exact kinetic energy",
+    )
     plt.plot(
         t,
         energy_from_work,
-        "--",
-        label="K0 + electric-field work"
+        ":",
+        label="K0 + electric-field work",
     )
 
     plt.xlabel("t")
     plt.ylabel("Energy")
-
-    plt.title(
-        "Polarization benchmark: work-energy consistency"
-    )
-
+    plt.title("Polarization benchmark: energy consistency")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
     plt.savefig(
         figures_dir / "polarization_energy.png",
-        dpi=200
+        dpi=200,
     )
 
     # --------------------------------------------------
-    # Figure 6:
-    # Three-dimensional trajectory
+    # Figure 6: three-dimensional trajectory
     # --------------------------------------------------
 
     fig = plt.figure(figsize=(8, 7))
-
-    ax = fig.add_subplot(
-        111,
-        projection="3d"
-    )
+    ax = fig.add_subplot(111, projection="3d")
 
     ax.plot(
         x,
         y,
         z,
-        label="Particle trajectory"
+        label="Numerical trajectory",
     )
-
     ax.plot(
-        gc_x,
-        gc_y,
-        gc_z,
+        x_exact,
+        y_exact,
+        z_exact,
         "--",
-        label="Numerical guiding center"
+        label="Exact full-orbit solution",
     )
 
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-
-    ax.set_title(
-        "Polarization drift: 3D trajectory"
-    )
-
+    ax.set_title("Polarization benchmark: 3D trajectory")
     ax.legend()
     plt.tight_layout()
 
     plt.savefig(
         figures_dir / "polarization_3d_trajectory.png",
-        dpi=200
+        dpi=200,
     )
 
     plt.show()
